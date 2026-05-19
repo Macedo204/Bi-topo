@@ -5,8 +5,8 @@
     <title>Revista Biótopo</title>
     <style>
         /* Fundo do site e sombra do livro */
-        body { margin: 0; background-color: #f4f4f4; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .flip-book { box-shadow: 0 0 20px rgba(0,0,0,0.2); }
+        body { margin: 0; background-color: #f4f4f4; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        .flip-book { box-shadow: 0 0 30px rgba(0,0,0,0.3); } 
     </style>
 </head>
 <body>
@@ -15,22 +15,28 @@
     <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.min.js"></script>
     <script>
         const flipbookContainer = document.getElementById('flipbook');
-        const totalPaginas = 40;
+        const totalPaginas = 40; 
         const listaDeImagens = [];
 
-        // Prepara a lista de imagens (1.jpg, 2.jpg, etc.) e guarda na memória
+        // Prepara a lista de imagens (1.jpg, 2.jpg... 40.jpg)
         for (let i = 1; i <= totalPaginas; i++) {
             listaDeImagens.push(`${i}.jpg`);
         }
 
-        // Configuração do livro
+        // Configuração com a resolução exata de 2482 x 3510
         const pageFlip = new St.PageFlip(flipbookContainer, {
-            width: 400, // Largura de uma única página
-            height: 600, // Altura de uma única página
-            showCover: true // A primeira e última imagem funcionam como capas
+            width: 2482, 
+            height: 3510, 
+            showCover: true, // Mantém as folhas duplas sincronizadas
+            minWidth: 400,   // Tamanho mínimo para telemóveis
+            minHeight: 565,  // Proporção ajustada para o tamanho mínimo
+            maxWidth: 2482,  // Limita ao tamanho real para máxima nitidez
+            maxHeight: 3510,
+            drawingSpeed: 5, 
+            usePortrait: false 
         });
         
-        // A magia acontece aqui: carregamos as imagens diretamente sem HTML extra!
+        // Carrega as imagens e inicializa o livro
         pageFlip.loadFromImages(listaDeImagens);
     </script>
 </body>
