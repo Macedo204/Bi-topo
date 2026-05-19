@@ -4,10 +4,9 @@
     <meta charset="UTF-8">
     <title>Revista Biótopo</title>
     <style>
-        /* Estilos para centrar o livro e dar-lhe sombra */
+        /* Fundo do site e sombra do livro */
         body { margin: 0; background-color: #f4f4f4; display: flex; justify-content: center; align-items: center; height: 100vh; }
         .flip-book { box-shadow: 0 0 20px rgba(0,0,0,0.2); }
-        .page { background-color: white; background-size: cover; background-position: center; }
     </style>
 </head>
 <body>
@@ -16,25 +15,23 @@
     <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.min.js"></script>
     <script>
         const flipbookContainer = document.getElementById('flipbook');
-        const totalPaginas = 40; // <-- Muda este número consoante as páginas da edição
+        const totalPaginas = 40;
+        const listaDeImagens = [];
 
-        // Ciclo que cria as 40 páginas automaticamente
+        // Prepara a lista de imagens (1.jpg, 2.jpg, etc.) e guarda na memória
         for (let i = 1; i <= totalPaginas; i++) {
-            const div = document.createElement('div');
-            div.className = 'page';
-            // Vai procurar as imagens 1.jpg, 2.jpg... até 40.jpg
-            div.style.backgroundImage = `url('${i}.jpg')`;
-            flipbookContainer.appendChild(div);
+            listaDeImagens.push(`${i}.jpg`);
         }
 
-        // Inicialização e configuração das medidas
+        // Configuração do livro
         const pageFlip = new St.PageFlip(flipbookContainer, {
             width: 400, // Largura de uma única página
             height: 600, // Altura de uma única página
-            showCover: true // A primeira imagem atua como uma capa rígida
+            showCover: true // A primeira e última imagem funcionam como capas
         });
         
-        pageFlip.loadFromHTML(document.querySelectorAll('.page'));
+        // A magia acontece aqui: carregamos as imagens diretamente sem HTML extra!
+        pageFlip.loadFromImages(listaDeImagens);
     </script>
 </body>
 </html>
