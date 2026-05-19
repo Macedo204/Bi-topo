@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Revista Biótopo</title>
     <style>
-        /* Fundo do site e sombra do livro */
+        /* Fundo do site e alinhamento */
         body { margin: 0; background-color: #f4f4f4; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         .flip-book { box-shadow: 0 0 30px rgba(0,0,0,0.3); } 
     </style>
@@ -18,25 +18,24 @@
         const totalPaginas = 40; 
         const listaDeImagens = [];
 
-        // Prepara a lista de imagens (1.jpg, 2.jpg... 40.jpg)
+        // Prepara a lista de imagens (1.jpg até 40.jpg)
         for (let i = 1; i <= totalPaginas; i++) {
             listaDeImagens.push(`${i}.jpg`);
         }
 
-        // Configuração com a resolução exata de 2482 x 3510
         const pageFlip = new St.PageFlip(flipbookContainer, {
-            width: 2482, 
-            height: 3510, 
-            showCover: true, // Mantém as folhas duplas sincronizadas
-            minWidth: 400,   // Tamanho mínimo para telemóveis
-            minHeight: 565,  // Proporção ajustada para o tamanho mínimo
-            maxWidth: 2482,  // Limita ao tamanho real para máxima nitidez
-            maxHeight: 3510,
+            width: 707,  // Tamanho lógico da página (exatamente metade da tua proporção)
+            height: 1000, // Tamanho lógico (metade de 2000)
+            size: "fit",  // Magia aqui: obriga o livro a caber sempre no ecrã inteiro sem cortar
+            showCover: true, // Mantém o alinhamento correto das páginas duplas (como a do pássaro)
+            minWidth: 350,
+            minHeight: 500,
+            maxWidth: 1414, // Limite máximo para manter a nitidez
+            maxHeight: 2000,
             drawingSpeed: 5, 
             usePortrait: false 
         });
         
-        // Carrega as imagens e inicializa o livro
         pageFlip.loadFromImages(listaDeImagens);
     </script>
 </body>
