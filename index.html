@@ -4,13 +4,19 @@
     <meta charset="UTF-8">
     <title>Revista Biótopo</title>
     <style>
-        /* Fundo do site e alinhamento */
+        /* Fundo do site e centramento */
         body { margin: 0; background-color: #f4f4f4; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        .flip-book { box-shadow: 0 0 30px rgba(0,0,0,0.3); } 
+        
+        /* A caixa limitadora que diz à revista até onde ela pode crescer */
+        .container { width: 95vw; height: 95vh; display: flex; justify-content: center; align-items: center; }
+        
+        .flip-book { box-shadow: 0 0 30px rgba(0,0,0,0.3); }
     </style>
 </head>
 <body>
-    <div class="flip-book" id="flipbook"></div>
+    <div class="container">
+        <div class="flip-book" id="flipbook"></div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.min.js"></script>
     <script>
@@ -24,19 +30,21 @@
         }
 
         const pageFlip = new St.PageFlip(flipbookContainer, {
-            width: 707,  // Tamanho lógico da página (exatamente metade da tua proporção)
-            height: 1000, // Tamanho lógico (metade de 2000)
-            size: "fit",  // Magia aqui: obriga o livro a caber sempre no ecrã inteiro sem cortar
-            showCover: true, // Mantém o alinhamento correto das páginas duplas (como a do pássaro)
+            width: 1414,  // A tua proporção de alta resolução
+            height: 2000, 
+            size: "fit",  // Agora já vai encaixar perfeitamente na .container
+            showCover: true, 
             minWidth: 350,
             minHeight: 500,
-            maxWidth: 1414, // Limite máximo para manter a nitidez
+            maxWidth: 1414, 
             maxHeight: 2000,
             drawingSpeed: 5, 
             usePortrait: false 
         });
         
-        pageFlip.loadFromImages(listaDeImagens);
+        pageFlip.loadFromImages(listaDeImagens).catch((erro) => {
+            alert("Erro: O código não encontrou as imagens. Confirma no GitHub se se chamam exatamente 1.jpg, 2.jpg... até 40.jpg (tudo em minúsculas).");
+        });
     </script>
 </body>
 </html>
