@@ -79,9 +79,10 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 
 const PDF_FILENAME = 'revista.pdf';
 
-let spreadImages = []; // uma imagem (dataURL) já pronta por spread
-let currentSpread = 0;
+let spreadImages = [];
 let pageRangeLabels = [];
+let currentSpread = 0;
+let totalGroups = 0;
 
 const viewer = document.getElementById('viewer');
 const img = document.getElementById('page-img');
@@ -94,66 +95,69 @@ const loading = document.getElementById('loading');
 async function carregarRevista() {
   try {
     const pdf = await pdfjsLib.getDocument(PDF_FILENAME).promise;
+    const totalPages = pdf.numPages;
 
-    // Primeiro renderiza cada página individualmente para canvases
-    const pageCanvases = [];
-    for (let i = 1; i <= pdf.numPages; i++) {
-      loading.textContent = `Processando página ${i} de ${pdf.numPages}...`;
-      const page = await pdf.getPage(i);
-      const viewport = page.getViewport({ scale: 1.5 });
-      const canvas = document.createElement('canvas');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      const context = canvas.getContext('2d');
-      await page.render({ canvasContext: context, viewport }).promise;
-      pageCanvases.push(canvas);
-    }
-
-    loading.textContent = 'Montando as páginas...';
-
-    // Agrupa em spreads: capa sozinha, depois pares (2-3, 4-5...)
     const groups = [];
     groups.push([0]);
-    for (let i = 1; i < pageCanvases.length; i += 2) {
-      if (i + 1 < pageCanvases.length) {
-        groups.push([i, i + 1]);
-      } else {
-        groups.push([i]);
-      }
+    for (let i = 1; i < totalPages; i += 2) {
+      if (i + 1 < totalPages) groups.push([i, i + 1]);
+      else groups.push([i]);
     }
-
-    // Para cada grupo, desenha numa ÚNICA imagem combinada
-    spreadImages = groups.map((group) => {
-      if (group.length === 1) {
-        const c = pageCanvases[group[0]];
-        return c.toDataURL('image/jpeg', 0.92);
-      }
-      const c1 = pageCanvases[group[0]];
-      const c2 = pageCanvases[group[1]];
-      const h = Math.max(c1.height, c2.height);
-      const combined = document.createElement('canvas');
-      combined.width = c1.width + c2.width;
-      combined.height = h;
-      const ctx = combined.getContext('2d');
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(0, 0, combined.width, combined.height);
-      ctx.drawImage(c1, 0, 0);
-      ctx.drawImage(c2, c1.width, 0);
-      return combined.toDataURL('image/jpeg', 0.92);
-    });
-
-    pageRangeLabels = groups.map((group) =>
-      group.length === 1
-        ? `Página ${group[0] + 1} de ${pageCanvases.length}`
-        : `Páginas ${group[0] + 1}-${group[1] + 1} de ${pageCanvases.length}`
+    totalGroups = groups.length;
+    spreadImages = new Array(totalGroups).fill(null);
+    pageRangeLabels = groups.map((g) =>
+      g.length === 1
+        ? `Página ${g[0] + 1} de ${totalPages}`
+        : `Páginas ${g[0] + 1}-${g[g.length - 1] + 1} de ${totalPages}`
     );
 
-    loading.style.display = 'none';
-    currentSpread = 0;
-    showSpread(currentSpread);
-    viewer.style.display = 'flex';
-    controls.style.display = 'flex';
+    let jaMostrouAlgumaCoisa = false;
 
+    for (let gi = 0; gi < groups.length; gi++) {
+      const group = groups[gi];
+      const canvases = [];
+
+      for (const pageIndex of group) {
+        const page = await pdf.getPage(pageIndex + 1);
+        const viewport = page.getViewport({ scale: 1.5 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const context = canvas.getContext('2d');
+        await page.render({ canvasContext: context, viewport }).promise;
+        canvases.push(canvas);
+      }
+
+      let dataUrl;
+      if (canvases.length === 1) {
+        dataUrl = canvases[0].toDataURL('image/jpeg', 0.92);
+      } else {
+        const c1 = canvases[0], c2 = canvases[1];
+        const h = Math.max(c1.height, c2.height);
+        const combined = document.createElement('canvas');
+        combined.width = c1.width + c2.width;
+        combined.height = h;
+        const ctx = combined.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, combined.width, combined.height);
+        ctx.drawImage(c1, 0, 0);
+        ctx.drawImage(c2, c1.width, 0);
+        dataUrl = combined.toDataURL('image/jpeg', 0.92);
+      }
+
+      spreadImages[gi] = dataUrl;
+
+      if (!jaMostrouAlgumaCoisa) {
+        jaMostrouAlgumaCoisa = true;
+        loading.style.display = 'none';
+        viewer.style.display = 'flex';
+        controls.style.display = 'flex';
+        currentSpread = 0;
+        showSpread(0);
+      } else {
+        atualizarBotoes();
+      }
+    }
   } catch (err) {
     console.error('Erro ao processar PDF:', err);
     loading.textContent = 'Erro ao carregar a revista. Verifique se "revista.pdf" está na mesma pasta.';
@@ -161,15 +165,20 @@ async function carregarRevista() {
 }
 
 function showSpread(index) {
+  if (!spreadImages[index]) return;
   img.classList.add('flipping');
   setTimeout(() => {
     img.src = spreadImages[index];
     img.classList.remove('flipping');
   }, 200);
-
   pageInfo.textContent = pageRangeLabels[index];
-  prevBtn.disabled = index === 0;
-  nextBtn.disabled = index === spreadImages.length - 1;
+  atualizarBotoes();
+}
+
+function atualizarBotoes() {
+  prevBtn.disabled = currentSpread === 0;
+  const proximaPronta = spreadImages[currentSpread + 1] != null;
+  nextBtn.disabled = currentSpread >= totalGroups - 1 || !proximaPronta;
 }
 
 prevBtn.addEventListener('click', () => {
@@ -180,7 +189,7 @@ prevBtn.addEventListener('click', () => {
 });
 
 nextBtn.addEventListener('click', () => {
-  if (currentSpread < spreadImages.length - 1) {
+  if (currentSpread < totalGroups - 1 && spreadImages[currentSpread + 1]) {
     currentSpread++;
     showSpread(currentSpread);
   }
@@ -192,6 +201,10 @@ document.addEventListener('keydown', (e) => {
 });
 
 carregarRevista();
+</script>
+
+</body>
+</html>
 </script>
 
 </body>
