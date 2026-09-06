@@ -16,20 +16,20 @@
   }
   #viewer {
     position: relative;
-    width: 1000px;
-    max-width: 95vw;
     height: 700px;
+    max-width: 95vw;
     background: #fff;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
     display: none;
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    transition: width 0.25s ease;
   }
   #viewer img {
-    max-width: 100%;
-    max-height: 100%;
+    width: 100%;
+    height: 100%;
     object-fit: contain;
+    display: block;
     opacity: 1;
     transition: opacity 0.25s ease, transform 0.25s ease;
   }
@@ -54,8 +54,8 @@
   }
   button:hover:not(:disabled) { background: #666; }
   button:disabled { background: #222; cursor: not-allowed; opacity: 0.5; }
-  #page-info { color: #ccc; font-size: 14px; }
-  #loading { color: #ccc; margin-top: 10px; font-size: 16px; }
+  #page-info { color: #555; font-size: 14px; }
+  #loading { color: #555; margin-top: 10px; font-size: 16px; }
 </style>
 </head>
 <body>
@@ -78,8 +78,10 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 const PDF_FILENAME = 'revista.pdf';
+const VIEWER_HEIGHT = 700; // deve bater com o CSS #viewer height
 
 let spreadImages = [];
+let spreadRatios = [];   // largura/altura de cada spread, para dimensionar o #viewer
 let pageRangeLabels = [];
 let currentSpread = 0;
 let totalGroups = 0;
@@ -105,6 +107,7 @@ async function carregarRevista() {
     }
     totalGroups = groups.length;
     spreadImages = new Array(totalGroups).fill(null);
+    spreadRatios = new Array(totalGroups).fill(1);
     pageRangeLabels = groups.map((g) =>
       g.length === 1
         ? `Página ${g[0] + 1} de ${totalPages}`
@@ -128,9 +131,11 @@ async function carregarRevista() {
         canvases.push(canvas);
       }
 
-      let dataUrl;
+      let dataUrl, ratio;
       if (canvases.length === 1) {
-        dataUrl = canvases[0].toDataURL('image/jpeg', 0.92);
+        const c = canvases[0];
+        dataUrl = c.toDataURL('image/jpeg', 0.92);
+        ratio = c.width / c.height;
       } else {
         const c1 = canvases[0], c2 = canvases[1];
         const h = Math.max(c1.height, c2.height);
@@ -143,9 +148,11 @@ async function carregarRevista() {
         ctx.drawImage(c1, 0, 0);
         ctx.drawImage(c2, c1.width, 0);
         dataUrl = combined.toDataURL('image/jpeg', 0.92);
+        ratio = combined.width / combined.height;
       }
 
       spreadImages[gi] = dataUrl;
+      spreadRatios[gi] = ratio;
 
       if (!jaMostrouAlgumaCoisa) {
         jaMostrouAlgumaCoisa = true;
@@ -166,6 +173,11 @@ async function carregarRevista() {
 
 function showSpread(index) {
   if (!spreadImages[index]) return;
+
+  // Ajusta a largura do viewer conforme a proporção da imagem,
+  // eliminando o retângulo branco nas páginas únicas
+  viewer.style.width = (VIEWER_HEIGHT * spreadRatios[index]) + 'px';
+
   img.classList.add('flipping');
   setTimeout(() => {
     img.src = spreadImages[index];
@@ -201,10 +213,6 @@ document.addEventListener('keydown', (e) => {
 });
 
 carregarRevista();
-</script>
-
-</body>
-</html>
 </script>
 
 </body>
