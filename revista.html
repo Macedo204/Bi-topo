@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>Minha Revista</title>
+<style>
+  body {
+    margin: 0;
+    background: #2b2b2b;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+  }
+  #viewer {
+    position: relative;
+    width: 1000px;
+    max-width: 95vw;
+    height: 700px;
+    background: #1a1a1a;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    display: none;
+    align-items: stretch;
+    justify-content: center;
+  }
+  #page-left, #page-right {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: #fff;
+  }
+  #page-left img, #page-right img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    opacity: 1;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  #page-left img.flipping, #page-right img.flipping {
+    opacity: 0;
+    transform: scaleX(0.85);
+  }
+  #controls {
+    margin-top: 15px;
+    display: none;
+    align-items: center;
+    gap: 15px;
+  }
+  button {
+    padding: 8px 16px;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    background: #444;
+    color: white;
+    font-size: 14px;
+  }
+  button:hover:not(:disabled) { background: #666; }
+  button:disabled { background: #222; cursor: not-allowed; opacity: 0.5; }
+  #page-info { color: #ccc; font-size: 14px; }
+  #loading { color: #ccc; margin-top: 10px; font-size: 16px; }
+</style>
+</head>
+<body>
+
+<div id="loading">Carregando revista...</div>
+
+<div id="viewer">
+  <div id="page-left"><img alt="Página esquerda"></div>
+  <div id="page-right"><img alt="Página direita"></div>
+</div>
+
+<div id="controls">
+  <button id="prev">⟨ Anterior</button>
+  <span id="page-info">Página 1 de 1</span>
+  <button id="next">Próxima ⟩</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// Nome do arquivo PDF, na MESMA pasta deste HTML
+const PDF_FILENAME = 'revista.pdf';
+
+let pages = [];
+let spreads = [];
+let currentSpread = 0;
+
+const viewer = document.getElementById('viewer');
+const leftImg = document.querySelector('#page-left img');
+const rightImg = document.querySelector('#page-right img');
+const leftBox = document.getElementById('page-left');
+const rightBox = document.getElementById('page-right');
+const controls = document.getElementById('controls');
+const pageInfo = document.getElementById('page-info');
+const prevBtn = document.getElementById('prev');
+const nextBtn = document.getElementById('next');
+const loading = document.getElementById('loading');
+
+async function carregarRevista() {
+  try {
+    const pdf = await pdfjsLib.getDocument(PDF_FILENAME).promise;
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      loading.textContent = `Processando página ${i} de ${pdf.numPages}...`;
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: 1.5 });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const context = canvas.getContext('2d');
+      await page.render({ canvasContext: context, viewport }).promise;
+      pages.push(canvas.toDataURL('image/jpeg', 0.85));
+    }
+
+    loading.style.display = 'none';
+    buildSpreads();
+    currentSpread = 0;
+    showSpread(currentSpread);
+    viewer.style.display = 'flex';
+    controls.style.display = 'flex';
+
+  } catch (err) {
+    console.error('Erro ao processar PDF:', err);
+    loading.textContent = 'Erro ao carregar a revista. Verifique se "revista.pdf" está na mesma pasta.';
+  }
+}
+
+function buildSpreads() {
+  spreads = [];
+  if (pages.length === 0) return;
+  spreads.push([0]);
+  for (let i = 1; i < pages.length; i += 2) {
+    if (i + 1 < pages.length) {
+      spreads.push([i, i + 1]);
+    } else {
+      spreads.push([i]);
+    }
+  }
+}
+
+function showSpread(index) {
+  const spread = spreads[index];
+  if (!spread) return;
+
+  leftImg.classList.add('flipping');
+  rightImg.classList.add('flipping');
+
+  setTimeout(() => {
+    if (spread.length === 1) {
+      leftBox.style.display = 'none';
+      rightBox.style.display = 'flex';
+      rightImg.src = pages[spread[0]];
+    } else {
+      leftBox.style.display = 'flex';
+      rightBox.style.display = 'flex';
+      leftImg.src = pages[spread[0]];
+      rightImg.src = pages[spread[1]];
+    }
+    leftImg.classList.remove('flipping');
+    rightImg.classList.remove('flipping');
+  }, 200);
+
+  const firstPageNum = spread[0] + 1;
+  const lastPageNum = spread[spread.length - 1] + 1;
+  pageInfo.textContent = spread.length === 1
+    ? `Página ${firstPageNum} de ${pages.length}`
+    : `Páginas ${firstPageNum}-${lastPageNum} de ${pages.length}`;
+
+  prevBtn.disabled = index === 0;
+  nextBtn.disabled = index === spreads.length - 1;
+}
+
+prevBtn.addEventListener('click', () => {
+  if (currentSpread > 0) {
+    currentSpread--;
+    showSpread(currentSpread);
+  }
+});
+
+nextBtn.addEventListener('click', () => {
+  if (currentSpread < spreads.length - 1) {
+    currentSpread++;
+    showSpread(currentSpread);
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') prevBtn.click();
+  if (e.key === 'ArrowRight') nextBtn.click();
+});
+
+carregarRevista();
+</script>
+
+</body>
+</html>
